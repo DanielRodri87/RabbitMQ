@@ -2,7 +2,6 @@ import pika
 import json
 import time
 from datetime import datetime
-import random
 import os
 import cv2
 import numpy as np
@@ -26,9 +25,17 @@ def connect_to_rabbitmq():
 class EmotionDetector:
     def __init__(self):
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        # Create results and faces directory
+        if not os.path.exists('/results'):
+            os.makedirs('/results')
         os.makedirs('/results/faces', exist_ok=True)
+        self.processed_count = 0
+        self.max_images = 10
 
     def predict(self, message):
+        if self.processed_count >= self.max_images:
+            return None
+            
         # Read image
         img = cv2.imread(message['image_path'])
         if img is None:
@@ -45,20 +52,20 @@ class EmotionDetector:
         w = w - 2*padding
         h = h - 2*padding
         
-        # Draw rectangle with thicker lines (proporcionalmente menor para imagem pequena)
+        # Draw rectangle
         cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 1)
         
         # Define text parameters
-        padding_text = 1  # Definir padding_text antes de usar
+        padding_text = 1
         text = message['emotion']
-        font_scale = 0.25  # Reduzido de 0.4 para 0.25
+        font_scale = 0.25
         thickness = 1
         font = cv2.FONT_HERSHEY_SIMPLEX
         
         # Get text size
         (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
         
-        # Ajustar posição do texto para garantir que fique dentro da imagem
+        # Ajustar posição do texto
         text_x = max(padding, min(x + padding_text, w - text_width - padding))
         text_y = max(text_height + padding_text, y - padding_text)
         
@@ -77,20 +84,26 @@ class EmotionDetector:
                    (0, 0, 0),
                    thickness)
         
-        # Resize image for better visualization in results
+        # Resize image for results
         img_display = cv2.resize(img, (240, 240), interpolation=cv2.INTER_NEAREST)
         
         # Save processed image
         result_path = f"/results/faces/{message['id']}.jpg"
         cv2.imwrite(result_path, img_display)
         
+        self.processed_count += 1
         return message['emotion']
 
+# Instância global
+detector = EmotionDetector()
+
 def process_face(message):
-    detector = EmotionDetector()
+    global detector
     result = detector.predict(message)
-    
-    # Save result
+    if result is None:
+        return None
+
+    # Save result JSON
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     result_path = f"/results/faces/{timestamp}_{message['id']}.json"
     
@@ -106,6 +119,14 @@ def process_face(message):
 def callback(ch, method, properties, body):
     message = json.loads(body)
     result = process_face(message)
+    if result is None:
+        print("Reached maximum number of processed images (10). Stopping consumer...")
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        ch.stop_consuming()
+        # Exit com código 0 para indicar sucesso
+        os._exit(0)
+        return
+    
     print(f"[Face] id={message['id']} -> predicted: {result}")
     ch.basic_ack(delivery_tag=method.delivery_tag)
 

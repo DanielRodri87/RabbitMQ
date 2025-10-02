@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -30,6 +28,7 @@ services:
     volumes:
       - ./images:/app/images
       - ./dataset-face:/app/dataset-face
+      - ./dataset-team:/app/dataset-team
       - ./results:/results
 
   consumer-face:
@@ -37,6 +36,7 @@ services:
       context: .
       dockerfile: Dockerfile.consumer
     container_name: consumer-face
+    restart: on-failure
     environment:
       - RABBITMQ_HOST=rabbitmq
     depends_on:
@@ -45,9 +45,27 @@ services:
     networks:
       - app_network
     volumes:
-      - ./images:/app/images
       - ./dataset-face:/app/dataset-face
       - ./results:/results
+
+  consumer-team:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    container_name: consumer-team
+    restart: on-failure
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app_network
+    volumes:
+      - ./dataset-team:/app/dataset-team
+      - ./results:/results
+      - ./consumer_team.py:/app/consumer_team.py
+    command: python3 consumer_team.py
 
 networks:
   app_network:

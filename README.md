@@ -266,7 +266,9 @@ docker-compose logs -f consumer-team
 
 ## 👥 Autores
 
-[Seu Nome] - [Seu Email/GitHub]
+Daniel Rodrigues
+Rita de Cássia
+Walison Weudes
 
 ## 📄 Licença
 

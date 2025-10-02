@@ -1,57 +1,54 @@
-version: "3.8"
+version: '3'
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
-    hostname: rabbitmq
     container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - app_network
     healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 10s
-      timeout: 10s
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 2s
+      timeout: 30s
       retries: 5
 
-  generator:
-    build: ./generator
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
     container_name: generator
+    environment:
+      - RABBITMQ_HOST=rabbitmq
     depends_on:
       rabbitmq:
         condition: service_healthy
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: guest
-      RABBITMQ_PASS: guest
-    restart: unless-stopped
+    networks:
+      - app_network
+    volumes:
+      - ./images:/app/images
+      - ./dataset-face:/app/dataset-face
+      - ./results:/results
 
   consumer-face:
-    build: ./consumer-face
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
     container_name: consumer-face
+    environment:
+      - RABBITMQ_HOST=rabbitmq
     depends_on:
       rabbitmq:
         condition: service_healthy
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: guest
-      RABBITMQ_PASS: guest
-    restart: unless-stopped
-
-  consumer-team:
-    build: ./consumer-team
-    container_name: consumer-team
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: guest
-      RABBITMQ_PASS: guest
-    restart: unless-stopped
+    networks:
+      - app_network
+    volumes:
+      - ./images:/app/images
+      - ./dataset-face:/app/dataset-face
+      - ./results:/results
 
 networks:
-  default:
-    name: rabbitmq-ia-network
+  app_network:
+    driver: bridge

@@ -6,3 +6,6 @@
 .DS_Store
 
 venv/
+
+dataset-face/
+dataset-team/

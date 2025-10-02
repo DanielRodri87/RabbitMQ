@@ -1,0 +1,4 @@
+make run-producer: Executa o script do produtor
+make run-consumer: Executa o script do consumidor
+make run-all: Executa o produtor e o consumidor em paralelo
+make clean: Limpa os arquivos de cache do Python

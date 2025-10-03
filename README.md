@@ -6,6 +6,9 @@ Sistema distribuído desenvolvido em Java que utiliza RabbitMQ para processament
 
 O projeto implementa um sistema de processamento distribuído composto por 4 containers que trabalham em conjunto para gerar, enfileirar e processar imagens utilizando diferentes modelos de IA.
 
+🎥 **Demonstração no YouTube:** [Assista ao vídeo](https://www.youtube.com/watch?v=jlSEEjzmDuc)
+
+
 ## 🏗️ Arquitetura
 
 ```
